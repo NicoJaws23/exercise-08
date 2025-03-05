@@ -1,0 +1,21 @@
+---
+title: "exercise 8"
+format: html
+editor: visual
+---
+
+## Step 1: Libraries and Data
+
+## Step 2: Initial Plots
+
+## Step 3: ECV Beta 1 and Beta 0
+
+## Step 4: Confirm Betas
+
+## Step 5: Rinse and Repeat
+
+## Step 6: ECV Stats
+
+## Step 7: Permutation Time
+
+## Step 8: CI by Boostraping
