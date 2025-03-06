@@ -6,13 +6,83 @@ editor: visual
 
 ## Step 1: Libraries and Data
 
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(skimr)
+f <- "https://raw.githubusercontent.com/difiore/ada-datasets/main/Street_et_al_2017.csv"
+d <- read_csv(f)
+skim(d)
+```
+
 ## Step 2: Initial Plots
+
+```{r}
+#| message: false
+#| warning: false
+ECV_GS <- plot(data = d, ECV ~ Group_size)
+ECV_Long <- plot(data = d, ECV ~ Longevity)
+ECV_Wean <- plot(data = d, ECV ~ Weaning)
+ECV_Repro <- plot(data = d, ECV ~ Repro_lifespan)
+```
 
 ## Step 3: ECV Beta 1 and Beta 0
 
+```{r}
+#| message: false
+#| warning: false
+ECV_sd <- sd(d$ECV, na.rm = TRUE) #Y
+GS_sd <- sd(d$Group_size, na.rm = TRUE) #X
+
+b1 <- cor(d$Group_size, d$ECV, use = "complete.obs") * (ECV_sd/GS_sd)
+b0 <- mean(d$ECV, na.rm = TRUE) - (b1*mean(d$Group_size, na.rm = TRUE))
+print(paste("Beta 1 =",b1, "; Beta 0 =",b0))
+```
+
 ## Step 4: Confirm Betas
 
+```{r}
+#| message: false
+#| warning: false
+ECVlm <- lm(ECV ~ Group_size, data = d, na.action = na.omit)
+print(ECVlm)
+```
+
 ## Step 5: Rinse and Repeat
+
+```{r}
+#| message: false
+#| warning: false
+#Calc b1 and b0 on filtered dataset by radiation
+regCof <- function(df, rad, x, y){
+  group <- df |>
+    filter(Taxonomic_group == rad)
+  sdX <- sd(group[[x]], na.rm = TRUE)
+  sdY <- sd(group[[y]], na.rm = TRUE)
+  b1 <- cor(group[[x]], group[[y]], use = "complete.obs") * (sdY/sdX)
+  b0 <- mean(group[[y]], na.rm = TRUE) - (b1*mean(group[[x]], na.rm = TRUE))
+  return(c(b1, b0))
+}
+
+#Use lm() on a filtered data set
+filtLM <- function(df, rad, x, y){
+  group <- df |>
+    filter(Taxonomic_group == rad)
+  ECVlm <- lm(group[[y]] ~ group[[x]], na.action = na.omit)
+  return(ECVlm)
+}
+
+#Still not getting same values, bruh what?????
+cattys <- regCof(d, "Catarrhini", "Group_size", "ECV")
+cattysLM <- filtLM(d, "Catarrhini", "Group_size", "ECV")
+
+platys <- regCof(d, "Platyrrhini", "Group_size", "ECV")
+platysLM <- filtLM(d, "Platyrrhini", "Group_size", "ECV")
+
+strepys <- regCof(d, "Strepsirhini", "Group_size", "ECV")
+strepysLM <- filtLM(d, "Strepsirhini", "Group_size", "ECV")
+```
 
 ## Step 6: ECV Stats
 
