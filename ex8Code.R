@@ -21,9 +21,10 @@ GS_sd <- sd(d$Group_size, na.rm = TRUE) #X
 b1 <- cor(d$Group_size, d$ECV, use = "complete.obs") * (ECV_sd/GS_sd)
 b0 <- mean(d$ECV, na.rm = TRUE) - (b1*mean(d$Group_size, na.rm = TRUE))
 print(paste("Beta 1 =",b1, "; Beta 0 =",b0))
+
 #Step 4: Use lm() to check results
-ECVlm <- lm(ECV ~ Group_size, data = d, na.action = na.omit) #Does not match, ask tony?
-print(ECVlm) #are my X and Ys mixed up?
+ECVlm <- lm(ECV ~ Group_size, data = d, na.action = na.omit) 
+print(ECVlm) 
 
 #Step 5, Repeat this process for each primate radiation
 #catarrhines, platyrrhines, strepsirhines
@@ -47,7 +48,6 @@ filtLM <- function(df, rad, x, y){
   return(ECVlm)
 }
 
-#Still not getting same values, bruh what?????
 cattys <- regCof(d, "Catarrhini", "Group_size", "ECV")
 cattysLM <- filtLM(d, "Catarrhini", "Group_size", "ECV")
 
