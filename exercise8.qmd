@@ -91,4 +91,4 @@ strepysLM <- filtLM(d, "Strepsirhini", "Group_size", "ECV")
 
 ## Step 7: Permutation Time
 
-## Step 8: CI by Boostraping
+## Step 8: CI by Bootstraping

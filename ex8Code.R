@@ -15,15 +15,18 @@ ECV_Repro <- plot(data = d, ECV ~ Repro_lifespan)
 #Step 3: By hand get the beta1 and beta0
 #for ECV (Y variable) as a function of Group_size (X variable)
 #!!! Remove rows with missing data
-ECV_sd <- sd(d$ECV, na.rm = TRUE) #Y
-GS_sd <- sd(d$Group_size, na.rm = TRUE) #X
+d <- d |> 
+  filter(!is.na(ECV) & !is.na(Group_size))
 
-b1 <- cor(d$Group_size, d$ECV, use = "complete.obs") * (ECV_sd/GS_sd)
-b0 <- mean(d$ECV, na.rm = TRUE) - (b1*mean(d$Group_size, na.rm = TRUE))
+ECV_sd <- sd(d$ECV) #Y
+GS_sd <- sd(d$Group_size) #X
+
+b1 <- cor(d$Group_size, d$ECV) * (ECV_sd/GS_sd)
+b0 <- mean(d$ECV) - (b1*mean(d$Group_size))
 print(paste("Beta 1 =",b1, "; Beta 0 =",b0))
 
 #Step 4: Use lm() to check results
-ECVlm <- lm(ECV ~ Group_size, data = d, na.action = na.omit) 
+ECVlm <- lm(ECV ~ Group_size, data = d) 
 print(ECVlm) 
 
 #Step 5, Repeat this process for each primate radiation
@@ -33,10 +36,10 @@ print(ECVlm)
 regCof <- function(df, rad, x, y){
   group <- df |>
     filter(Taxonomic_group == rad)
-  sdX <- sd(group[[x]], na.rm = TRUE)
-  sdY <- sd(group[[y]], na.rm = TRUE)
-  b1 <- cor(group[[x]], group[[y]], use = "complete.obs") * (sdY/sdX)
-  b0 <- mean(group[[y]], na.rm = TRUE) - (b1*mean(group[[x]], na.rm = TRUE))
+  sdX <- sd(group[[x]])
+  sdY <- sd(group[[y]])
+  b1 <- cor(group[[x]], group[[y]]) * (sdY/sdX)
+  b0 <- mean(group[[y]]) - (b1*mean(group[[x]]))
   return(c(b1, b0))
 }
 
@@ -44,7 +47,7 @@ regCof <- function(df, rad, x, y){
 filtLM <- function(df, rad, x, y){
   group <- df |>
     filter(Taxonomic_group == rad)
-  ECVlm <- lm(group[[y]] ~ group[[x]], na.action = na.omit)
+  ECVlm <- lm(group[[y]] ~ group[[x]])
   return(ECVlm)
 }
 
