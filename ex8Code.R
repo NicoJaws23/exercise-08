@@ -7,11 +7,17 @@ skim(d)
 
 #Step 2: Plots ECV as a function of social group size,
 #longevity, weaning, and reproductive lifespan
-ECV_GS <- plot(data = d, ECV ~ Group_size)
-ECV_Long <- plot(data = d, ECV ~ Longevity)
-ECV_Wean <- plot(data = d, ECV ~ Weaning)
-ECV_Repro <- plot(data = d, ECV ~ Repro_lifespan)
-
+library(ggplot2)
+library(cowplot)
+ECV_GS <- ggplot(data = d, mapping = aes(Group_size, ECV)) +
+  geom_point()
+ECV_Long <- ggplot(data = d, mapping = aes(Longevity, ECV)) +
+  geom_point()
+ECV_Wean <- ggplot(data = d, mapping = aes(Weaning, ECV)) +
+  geom_point()
+ECV_Repro <- ggplot(data = d, mapping = aes(Repro_lifespan, ECV)) +
+  geom_point()
+plot_grid(ECV_GS, ECV_Long, ECV_Wean, ECV_Repro)
 #Step 3: By hand get the beta1 and beta0
 #for ECV (Y variable) as a function of Group_size (X variable)
 #!!! Remove rows with missing data
@@ -63,5 +69,51 @@ strepysLM <- filtLM(d, "Strepsirhini", "Group_size", "ECV")
 #Step 6: From step 3, calc standard error for slope coefficient (b1)
 #95% CI, and the p value associatd with this coefficient BY HAND
 #Also get the same info from the results of the lm() function
+#SEb1 <- sqrt(MSE/SSX), MSE is mean of remaining variance, SSX is how much
+#variation there is
+#SEb0 <- sqrt(MSE*sum(x^2))/(n * SSX) OR SEb1 * (sqrt(sum(x^2))/n)
+
+#Step 6.1: Calculate MSE and SSX
+SSE <- sum(ECVlm$residuals^2)
+SSX <- sum((ECVlm$model$Group_size - mean(ECVlm$model$Group_size))^2)
+df_error <- nrow(d) - 2
+MSE <- SSE/df_error
+
+#Step 6.2: Calc SE of b1
+SEb1 <- sqrt(MSE/SSX)
+summary(ECVlm)
+
+#Step 6.3: 95% CI for b1
+CI <- b1 + qt(p=c(0.025, 0.975), ncp=0, df=150)*SEb1
+confint(ECVlm) #Rahhh
+#Step 6.4: p-value of b1, need t_stat (t = estimate/SE) to calc
+#p-value (p = 2*pt(t, df = nrow - 2))
+tB1 <- b1/SEb1
+pB1 <- 2*pt(tB1, df = 149, lower.tail = FALSE) #Works
+
+#Step 7: Run 1000 permutations to generate a null sampling distribution
+#for the slope coefficient
+#Permutation tet
+#This is the true difference in data between male and female hr size
 
 
+#Permute
+reps <- 10000
+perm <- vector()
+
+for(i in 1:reps){
+  temp <- d #temporary dataframe to hold while we permute, maintain data integrity
+  temp$sex <- sample(temp$sex) #shuffle stuff
+  summary <- temp |>
+    group_by(sex) |> #get means after shuffling
+    summarise(mean = mean(kernel95))
+  perm[[i]] <- filter(summary, sex == "F") |> pull(mean) - filter(summary, sex == "M") |> pull(mean) #pull means for each sex and check difference again
+} #Perm vector is dist in differnces in homerange size after each reshuffling
+
+#Perm dist should be centerd on 0
+#now we can calculate the p value
+
+hist(perm)
+
+#Now we estimate the p value
+p <- sum(perm < -1 * abs(obs) | perm > abs(obs))/reps

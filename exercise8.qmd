@@ -4,7 +4,13 @@ format: html
 editor: visual
 ---
 
+# Practice Simple Linear Regression
+
+For this exercise I will be doing a simple linear regression examining how brain sizes (ECV) of different primate taxa varies as a function of group size
+
 ## Step 1: Libraries and Data
+
+First I will get the data loaded in an do some initial analysis using the skim() function in the {skimr} package to generate the median, minimum, maximum, 1st and 3rd quartile values, mean, and standard deviation for each variable.
 
 ```{r}
 #| message: false
@@ -18,16 +24,27 @@ skim(d)
 
 ## Step 2: Initial Plots
 
+Next I will produce plots which plot brain size (ECV) as a function of group size, longevity, juvenile period length, and reproductive lifespan. I used the {cowplot} package to arrange these 4 plots in a grid
+
 ```{r}
 #| message: false
 #| warning: false
-ECV_GS <- plot(data = d, ECV ~ Group_size)
-ECV_Long <- plot(data = d, ECV ~ Longevity)
-ECV_Wean <- plot(data = d, ECV ~ Weaning)
-ECV_Repro <- plot(data = d, ECV ~ Repro_lifespan)
+library(ggplot2)
+library(cowplot)
+ECV_GS <- ggplot(data = d, mapping = aes(Group_size, ECV)) +
+                   geom_point()
+ECV_Long <- ggplot(data = d, mapping = aes(Longevity, ECV)) +
+                   geom_point()
+ECV_Wean <- ggplot(data = d, mapping = aes(Weaning, ECV)) +
+                   geom_point()
+ECV_Repro <- ggplot(data = d, mapping = aes(Repro_lifespan, ECV)) +
+                   geom_point()
+plot_grid(ECV_GS, ECV_Long, ECV_Wean, ECV_Repro)
 ```
 
 ## Step 3: ECV Beta 1 and Beta 0
+
+Now I will calculate the Beta 1 and Beta 0 (least squares regression coefficiants) for ECV (brain size) as a function of social group size. Since there are NA values in the data set, I filtered out any NAs in both ECV and Group_size before calculating the coefficients.
 
 ```{r}
 #| message: false
@@ -46,6 +63,8 @@ print(paste("Beta 1 =",b1, "; Beta 0 =",b0))
 
 ## Step 4: Confirm Betas
 
+Now I will use the lm() function to recalculate the coefficient to confirm that I calculated them properly by hand.
+
 ```{r}
 #| message: false
 #| warning: false
@@ -54,6 +73,10 @@ print(ECVlm)
 ```
 
 ## Step 5: Rinse and Repeat
+
+Now I will again measure the regression coefficients but this time I will do them based on each of the three radiations of primates. To do this by hand, I first created a function called regCof() which will take the data set, name of the radiation, and the x and y values the user want to run a regression on as arguments. The function will then calculate the Beta 1 and Beta 0 coefficients. To confirm these results, the filtLM() function I created will take the same agreements and apply the lm() function to the filtered data set.
+
+All three groups of primates have different values for both of the regression coefficients, with platyrrhines as having the highest Beta 1 value and catarrhines having the highest Beta 0 value. All of them however have positive coefficients with slope being greater than 1, suggesting a similar positive relationship between brain size and group size across all three primate radiations.
 
 ```{r}
 #| message: false
@@ -79,15 +102,55 @@ filtLM <- function(df, rad, x, y){
 
 cattys <- regCof(d, "Catarrhini", "Group_size", "ECV")
 cattysLM <- filtLM(d, "Catarrhini", "Group_size", "ECV")
+print(cattys)
+print(cattysLM)
 
 platys <- regCof(d, "Platyrrhini", "Group_size", "ECV")
 platysLM <- filtLM(d, "Platyrrhini", "Group_size", "ECV")
+print(platys)
+print(platysLM)
 
 strepys <- regCof(d, "Strepsirhini", "Group_size", "ECV")
 strepysLM <- filtLM(d, "Strepsirhini", "Group_size", "ECV")
+print(strepys)
+print(strepysLM)
 ```
 
 ## Step 6: ECV Stats
+
+Now, I will use my first slope coefficient (Beta 1) based off the first regression of brain size and group size to calculate the standard error, 95% confidence intervals, and p-value associated with the coefficient.
+
+In order to calculate the standard error, I first need to determine the sum of squares of X (SSX) and mean of remaining variance (MSE). SSX is calculated by taking the sum of the values for out X value in the model section of the linear model minus the mean of this value squared. To calculate the MSE, we need to divide the squared sum of the residuales by the number of degrees of freedom for the error sum of squares. Once we have the MSE and SSX we divide them and take the square root of that to determine the standard error of the slope coefficient
+
+For the 95% confidence intervals we add the slope coefficient to a qt() function based on the size of the confidence interval and out degrees of freedom and multiplied by the standard error we calculated.
+
+Finally, for the p-value, we first calculate the t-statistics (slope coefficient/standard error) and then plugging it into the pt() function which we then multiply by 2. As a final step, I used the summary() function on my linear model to check my work for the standard error and p-value and the confint() function on the linear model to make sure I calculated the confidence intervals correctly.
+
+```{r}
+#Step 6.1: Calculate MSE and SSX
+SSE <- sum(ECVlm$residuals^2)
+SSX <- sum((ECVlm$model$Group_size - mean(ECVlm$model$Group_size))^2)
+df_error <- nrow(d) - 2
+MSE <- SSE/df_error
+
+#Step 6.2: Calc SE of b1
+SEb1 <- sqrt(MSE/SSX)
+SEb1
+#Step 6.3: 95% CI for b1
+CIb1 <- b1 + qt(p=c(0.025, 0.975), ncp=0, df=150)*SEb1
+CIbi
+#Step 6.4: p-value of b1, need t_stat (t = estimate/SE) to calc
+#p-value (p = 2*pt(t, df = nrow - 2))
+tB1 <- b1/SEb1
+pB1 <- 2*pt(tB1, df = 149, lower.tail = FALSE)
+tB1
+pB1
+#Step 6.4: Compare results to those of the lm() function
+summary(ECVlm)
+lmCI <- confint(ECVlm)
+lmCI
+
+```
 
 ## Step 7: Permutation Time
 
