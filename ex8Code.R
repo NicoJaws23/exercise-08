@@ -92,28 +92,55 @@ tB1 <- b1/SEb1
 pB1 <- 2*pt(tB1, df = 149, lower.tail = FALSE) #Works
 
 #Step 7: Run 1000 permutations to generate a null sampling distribution
-#for the slope coefficient
-#Permutation tet
-#This is the true difference in data between male and female hr size
-
+#for the slope coefficient, need to permute ECV since we are interested
+#in how it changes in relation to group size
+#Permutation test
 
 #Permute
-reps <- 10000
-perm <- vector()
+reps <- 1000
+slopes <- vector()
 
 for(i in 1:reps){
   temp <- d #temporary dataframe to hold while we permute, maintain data integrity
-  temp$sex <- sample(temp$sex) #shuffle stuff
-  summary <- temp |>
-    group_by(sex) |> #get means after shuffling
-    summarise(mean = mean(kernel95))
-  perm[[i]] <- filter(summary, sex == "F") |> pull(mean) - filter(summary, sex == "M") |> pull(mean) #pull means for each sex and check difference again
+  temp$ECV <- sample(temp$ECV) #Shuffle up ECV values
+  m <- lm(ECV ~ Group_size, data = temp) #Create lm based on shuffled temp values
+  slopes[[i]] <- m$coefficients[[2]] #store slopes
 } #Perm vector is dist in differnces in homerange size after each reshuffling
 
 #Perm dist should be centerd on 0
-#now we can calculate the p value
+hist(slopes)
 
-hist(perm)
+#Now we estimate the p value using the theory based method
+#This method requires the standard error of our null sampling distribution (standard
+#deviation), 
+slopes_sd <- sd(slopes)
+slopes_mean <- mean(slopes)
+t <- (slopes_mean - b1)/slopes_sd
+p_upper <- 1 - pt(abs(t), df = 150)
+p_lower <- pt(-1 * abs(t), df = 150)
+p <- p_upper + p_lower
+print(p) #Slightly larger but still significant p-value
+summary(ECVlm) #OG slope p-value is 7.26e-11
 
-#Now we estimate the p value
-p <- sum(perm < -1 * abs(obs) | perm > abs(obs))/reps
+#Step 8: Use bootstrapping to get 95% CI for estimate of slope
+#coefficient using both the quantile and theory based method
+confint(ECVlm)
+n_boot <- 1000
+boot <- vector(length=n_boot) #set up dummy variable to hold our sims
+n <- length(d) #boostrap sample size will be same length of data
+for (i in 1:n_boot){
+  bootSamp <- slice_sample(d, n = n, replace = TRUE)
+  bootM <- lm(ECV ~ Group_size, data = bootSamp)
+  boot[[i]] <- bootM$coefficients[[2]]
+}
+#CI by quantile
+ci <- quantile(boot, probs = c(0.025, 0.975))
+
+#CI by theory based method
+percent_ci <- 95
+alpha <- 1 - percent_ci/100
+bootMean <- mean(boot)
+bootSE <- sd(boot)
+lowerCI <- bootMean + qnorm(alpha/2)*bootSE
+upperCI <- bootMean + qnorm(1 - alpha/2)*bootSE
+ciTheory <- c(lowerCI, upperCI)
