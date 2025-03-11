@@ -112,11 +112,11 @@ hist(slopes)
 
 #Now we estimate the p value using the theory based method
 #This method requires the standard error of our null sampling distribution (standard
-#deviation), 
+#deviation),  comparing 2 things, so we need a one-tailed t-test
 slopes_sd <- sd(slopes)
 slopes_mean <- mean(slopes)
 t <- (slopes_mean - b1)/slopes_sd
-p_upper <- 1 - pt(abs(t), df = 150)
+p_upper <- 1 - pt(abs(t), df = 150) #doing upper and lower 
 p_lower <- pt(-1 * abs(t), df = 150)
 p <- p_upper + p_lower
 print(p) #Slightly larger but still significant p-value
