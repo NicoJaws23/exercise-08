@@ -102,7 +102,7 @@ slopes <- vector()
 
 for(i in 1:reps){
   temp <- d #temporary dataframe to hold while we permute, maintain data integrity
-  temp$ECV <- sample(temp$ECV) #Shuffle up ECV values
+  temp$ECV <- sample(temp$ECV) #Sample ECV values
   m <- lm(ECV ~ Group_size, data = temp) #Create lm based on shuffled temp values
   slopes[[i]] <- m$coefficients[[2]] #store slopes
 } #Perm vector is dist in differnces in homerange size after each reshuffling

@@ -154,6 +154,10 @@ lmCI
 
 ## Step 7: Permutation Time
 
+Now we will use a for{} loop to run 1000 permutations generate a null sampling distribution for the slope coefficient. We need to permute the brain size variable (ECV) as we are interested in how it changes in relation to group size. In the loop, we will create a temporary data frame based on the original to ensure the integrity of the data. The we will sample the temporary data for brain size and use this sample to run an ordinary least squares regression and save the slope coefficient in a vector called slopes.
+
+After the permutation, we will calculate the p-value. The original p-value was 7.26e-11 based on the lm() function. We will calculate the p-value by hand using our permuted data via the theory-based method.
+
 ```{r}
 #Permute
 reps <- 1000
@@ -161,7 +165,7 @@ slopes <- vector()
 
 for(i in 1:reps){
   temp <- d #temporary dataframe to hold while we permute, maintain data integrity
-  temp$ECV <- sample(temp$ECV) #Shuffle up ECV values
+  temp$ECV <- sample(temp$ECV) #Sample ECV values
   m <- lm(ECV ~ Group_size, data = temp) #Create lm based on shuffled temp values
   slopes[[i]] <- m$coefficients[[2]] #store slopes
 } #Perm vector is dist in differnces in homerange size after each reshuffling
