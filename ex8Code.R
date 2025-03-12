@@ -92,29 +92,32 @@ tB1 <- b1/SEb1
 pB1 <- 2*pt(tB1, df = 149, lower.tail = FALSE) #Works
 
 #Step 7: Run 1000 permutations to generate a null sampling distribution
-#for the slope coefficient, need to permute ECV since we are interested
-#in how it changes in relation to group size
+#for the slope coefficient, need to permute Group_size since we want to break 
+#any association it has with brain size/ECV
+
 #Permutation test
 
 #Permute
+library(mosaic)
+library(broom)
 reps <- 1000
-slopes <- vector()
+slopes <- do(reps) * {
+  d_new <- d
+  d_new$Group_size <- sample(d_new$Group_size)
+  m <- lm(data = d_new, ECV ~ Group_size)
+  tidy(m) |>
+    filter(term == "Group_size") |>
+    pull(estimate)
+}
+hist(slopes$result)
 
-for(i in 1:reps){
-  temp <- d #temporary dataframe to hold while we permute, maintain data integrity
-  temp$ECV <- sample(temp$ECV) #Sample ECV values
-  m <- lm(ECV ~ Group_size, data = temp) #Create lm based on shuffled temp values
-  slopes[[i]] <- m$coefficients[[2]] #store slopes
-} #Perm vector is dist in differnces in homerange size after each reshuffling
-
-#Perm dist should be centerd on 0
-hist(slopes)
+permSE <- sd(slopes$result)
 
 #Now we estimate the p value using the theory based method
 #This method requires the standard error of our null sampling distribution (standard
 #deviation),  comparing 2 things, so we need a one-tailed t-test
-slopes_sd <- sd(slopes)
-slopes_mean <- mean(slopes)
+slopes_sd <- sd(slopes$result)
+slopes_mean <- mean(slopes$result)
 t <- (slopes_mean - b1)/slopes_sd
 p_upper <- 1 - pt(abs(t), df = 150) #doing upper and lower 
 p_lower <- pt(-1 * abs(t), df = 150)

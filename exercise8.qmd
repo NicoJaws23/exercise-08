@@ -159,27 +159,29 @@ Now we will use a for{} loop to run 1000 permutations generate a null sampling d
 After the permutation, we will calculate the p-value. The original p-value was 7.26e-11 based on the lm() function. We will calculate the p-value by hand using our permuted data via the theory-based method.
 
 ```{r}
-#Permute
+
+library(mosaic)
+library(broom)
 reps <- 1000
-slopes <- vector()
+slopes <- do(reps) * {
+  d_new <- d
+  d_new$Group_size <- sample(d_new$Group_size)
+  m <- lm(data = d_new, ECV ~ Group_size)
+  tidy(m) |>
+    filter(term == "Group_size") |>
+    pull(estimate)
+}
+hist(slopes$result)
 
-for(i in 1:reps){
-  temp <- d #temporary dataframe to hold while we permute, maintain data integrity
-  temp$ECV <- sample(temp$ECV) #Sample ECV values
-  m <- lm(ECV ~ Group_size, data = temp) #Create lm based on shuffled temp values
-  slopes[[i]] <- m$coefficients[[2]] #store slopes
-} #Perm vector is dist in differnces in homerange size after each reshuffling
-
-#Perm dist should be centerd on 0
-hist(slopes)
+permSE <- sd(slopes$result)
 
 #Now we estimate the p value using the theory based method
 #This method requires the standard error of our null sampling distribution (standard
 #deviation), 
-slopes_sd <- sd(slopes)
-slopes_mean <- mean(slopes)
+slopes_sd <- sd(slopes$result)
+slopes_mean <- mean(slopes$result)
 t <- (slopes_mean - b1)/slopes_sd
-p_upper <- 1 - pt(abs(t), df = 150)
+p_upper <- 1 - pt(abs(t), df = 150) #doing upper and lower 
 p_lower <- pt(-1 * abs(t), df = 150)
 p <- p_upper + p_lower
 print(p) #Slightly larger but still significant p-value
