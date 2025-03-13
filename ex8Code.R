@@ -127,23 +127,27 @@ summary(ECVlm) #OG slope p-value is 7.26e-11
 
 #Step 8: Use bootstrapping to get 95% CI for estimate of slope
 #coefficient using both the quantile and theory based method
-confint(ECVlm)
-n_boot <- 1000
-boot <- vector(length=n_boot) #set up dummy variable to hold our sims
-n <- length(d) #boostrap sample size will be same length of data
-for (i in 1:n_boot){
-  bootSamp <- slice_sample(d, n = n, replace = TRUE)
-  bootM <- lm(ECV ~ Group_size, data = bootSamp)
-  boot[[i]] <- bootM$coefficients[[2]]
+nb <- 1000
+b <- do(nb) * {
+  b_new <- d
+  bs <- slice_sample(b_new, n = n, replace = TRUE)
+  bm <- lm(ECV ~ Group_size, data = bs)
+  tidy(bm) |>
+    filter(term == "Group_size") |>
+    pull(estimate)
 }
+
 #CI by quantile
-ci <- quantile(boot, probs = c(0.025, 0.975))
+ci <- quantile(b$result, probs = c(0.025, 0.975))
 
 #CI by theory based method
 percent_ci <- 95
 alpha <- 1 - percent_ci/100
-bootMean <- mean(boot)
-bootSE <- sd(boot)
+bootMean <- mean(b$result)
+bootSE <- sd(b$result)
 lowerCI <- bootMean + qnorm(alpha/2)*bootSE
 upperCI <- bootMean + qnorm(1 - alpha/2)*bootSE
 ciTheory <- c(lowerCI, upperCI)
+
+#Compare to original data
+confint(ECVlm)

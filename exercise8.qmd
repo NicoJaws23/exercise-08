@@ -127,6 +127,8 @@ For the 95% confidence intervals we add the slope coefficient to a qt() function
 Finally, for the p-value, we first calculate the t-statistics (slope coefficient/standard error) and then plugging it into the pt() function which we then multiply by 2. As a final step, I used the summary() function on my linear model to check my work for the standard error and p-value and the confint() function on the linear model to make sure I calculated the confidence intervals correctly.
 
 ```{r}
+#| message: false
+#| warning: false
 #Step 6.1: Calculate MSE and SSX
 SSE <- sum(ECVlm$residuals^2)
 SSX <- sum((ECVlm$model$Group_size - mean(ECVlm$model$Group_size))^2)
@@ -149,17 +151,17 @@ pB1
 summary(ECVlm)
 lmCI <- confint(ECVlm)
 lmCI
-
 ```
 
 ## Step 7: Permutation Time
 
-Now we will use a for{} loop to run 1000 permutations generate a null sampling distribution for the slope coefficient. We need to permute the brain size variable (ECV) as we are interested in how it changes in relation to group size. In the loop, we will create a temporary data frame based on the original to ensure the integrity of the data. The we will sample the temporary data for brain size and use this sample to run an ordinary least squares regression and save the slope coefficient in a vector called slopes.
+Now we will use a for{} loop to run 1000 permutations generate a null sampling distribution for the slope coefficient. We need to permute the group size variable because we want to break any associated it have with brain size. In the loop, we will create a temporary data frame based on the original to ensure the integrity of the data. The we will sample the temporary data for brain size and use this sample to run an ordinary least squares regression and save the slope coefficient in a vector called slopes.
 
-After the permutation, we will calculate the p-value. The original p-value was 7.26e-11 based on the lm() function. We will calculate the p-value by hand using our permuted data via the theory-based method.
+After the permutation, we will calculate the p-value. The original p-value was 7.26e-11 based on the lm() function, which is significant because it is less than 0.001. We will calculate the p-value by hand using our permuted data via the theory-based method. When I ran this, I got a p-value of 2.97e-8 which is still a significant result well below 0.001
 
 ```{r}
-
+#| message: false
+#| warning: false
 library(mosaic)
 library(broom)
 reps <- 1000
@@ -185,30 +187,38 @@ p_upper <- 1 - pt(abs(t), df = 150) #doing upper and lower
 p_lower <- pt(-1 * abs(t), df = 150)
 p <- p_upper + p_lower
 print(p) #Slightly larger but still significant p-value
-summary(ECVlm) #OG slope p-value is 7.26e-11
+summary(ECVlm)
 ```
 
 ## Step 8: CI by Bootstraping
 
-```{r}
-n_boot <- 1000
-boot <- vector(length=n_boot) #set up dummy variable to hold our sims
-n <- length(d) #boostrap sample size will be same length of data
-for (i in 1:n_boot){
-  bootSamp <- slice_sample(d, n = n, replace = TRUE)
-  bootM <- lm(ECV ~ Group_size, data = bootSamp)
-  boot[[i]] <- bootM$coefficients[[2]]
-}
-#CI by quantile
-ci <- quantile(boot, probs = c(0.025, 0.975))
+Finally, we will use the bootstrapping method to calculate the upper and lower 95% confidence intervals of our model. After running the bootstrap using the do() function from {mosaic} we will calculate the confidence intervals by using the quantile method and theory based method. The CI's from both these methods indicate that the slope coefficient is not different from 0, as they both intersect with 0, with the lower interval being negative and the upper interval being positive.
 
+```{r}
+#| message: false
+#| warning: false
+nb <- 1000
+b <- do(nb) * {
+  b_new <- d
+  bs <- slice_sample(b_new, n = n, replace = TRUE)
+  bm <- lm(ECV ~ Group_size, data = bs)
+  tidy(bm) |>
+    filter(term == "Group_size") |>
+    pull(estimate)
+}
+
+#CI by quantile
+ci <- quantile(b$result, probs = c(0.025, 0.975))
+ci
 #CI by theory based method
 percent_ci <- 95
 alpha <- 1 - percent_ci/100
-bootMean <- mean(boot)
-bootSE <- sd(boot)
+bootMean <- mean(b$result)
+bootSE <- sd(b$result)
 lowerCI <- bootMean + qnorm(alpha/2)*bootSE
 upperCI <- bootMean + qnorm(1 - alpha/2)*bootSE
 ciTheory <- c(lowerCI, upperCI)
-
+ciTheory
+#Compare to original data
+confint(ECVlm)
 ```
