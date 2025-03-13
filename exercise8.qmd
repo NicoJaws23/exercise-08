@@ -102,17 +102,17 @@ filtLM <- function(df, rad, x, y){
 
 cattys <- regCof(d, "Catarrhini", "Group_size", "ECV")
 cattysLM <- filtLM(d, "Catarrhini", "Group_size", "ECV")
-print(cattys)
+print(paste("Catarrhini Beta 1:", cattys[1], "and Beta 0:", cattys[2], "by hand"))
 print(cattysLM)
 
 platys <- regCof(d, "Platyrrhini", "Group_size", "ECV")
 platysLM <- filtLM(d, "Platyrrhini", "Group_size", "ECV")
-print(platys)
+print(paste("Platyrrhini Beta 1:", platys[1], "and Beta 0:", platys[2], "by hand"))
 print(platysLM)
 
 strepys <- regCof(d, "Strepsirhini", "Group_size", "ECV")
 strepysLM <- filtLM(d, "Strepsirhini", "Group_size", "ECV")
-print(strepys)
+print(paste("Strepsirhini Beta 1:", strepys[1], "and Beta 0:", strepys[2]))
 print(strepysLM)
 ```
 
@@ -137,16 +137,15 @@ MSE <- SSE/df_error
 
 #Step 6.2: Calc SE of b1
 SEb1 <- sqrt(MSE/SSX)
-SEb1
+print(paste("Slope coefficient standard error by hand:", SEb1))
 #Step 6.3: 95% CI for b1
 CIb1 <- b1 + qt(p=c(0.025, 0.975), ncp=0, df=150)*SEb1
-CIbi
+print(paste("Upper and lower 95% confidence intervals for slope coefficient by hand:", CIb1[1], CIb1[2]))
 #Step 6.4: p-value of b1, need t_stat (t = estimate/SE) to calc
 #p-value (p = 2*pt(t, df = nrow - 2))
 tB1 <- b1/SEb1
 pB1 <- 2*pt(tB1, df = 149, lower.tail = FALSE)
-tB1
-pB1
+print(paste("p-value for slope coefficient by hand:", pB1))
 #Step 6.4: Compare results to those of the lm() function
 summary(ECVlm)
 lmCI <- confint(ECVlm)
@@ -186,13 +185,13 @@ t <- (slopes_mean - b1)/slopes_sd
 p_upper <- 1 - pt(abs(t), df = 150) #doing upper and lower 
 p_lower <- pt(-1 * abs(t), df = 150)
 p <- p_upper + p_lower
-print(p) #Slightly larger but still significant p-value
+print(paste("p-value calulcated by hand useing theory-based method:", p)) #Slightly larger but still significant p-value
 summary(ECVlm)
 ```
 
 ## Step 8: CI by Bootstraping
 
-Finally, we will use the bootstrapping method to calculate the upper and lower 95% confidence intervals of our model. After running the bootstrap using the do() function from {mosaic} we will calculate the confidence intervals by using the quantile method and theory based method. The CI's from both these methods indicate that the slope coefficient is not different from 0, as they both intersect with 0, with the lower interval being negative and the upper interval being positive.
+Finally, we will use the bootstrapping method to calculate the upper and lower 95% confidence intervals of our model. After running the bootstrap using the do() function from {mosaic} we will calculate the confidence intervals by using the quantile method and theory based method. The CI's from both these methods indicate that the slope coefficient is different from 0 because both the lower and upper CI are positive and do not intersect with 0
 
 ```{r}
 #| message: false
@@ -200,7 +199,7 @@ Finally, we will use the bootstrapping method to calculate the upper and lower 9
 nb <- 1000
 b <- do(nb) * {
   b_new <- d
-  bs <- slice_sample(b_new, n = n, replace = TRUE)
+  bs <- slice_sample(b_new, n = nb, replace = TRUE)
   bm <- lm(ECV ~ Group_size, data = bs)
   tidy(bm) |>
     filter(term == "Group_size") |>
@@ -209,7 +208,7 @@ b <- do(nb) * {
 
 #CI by quantile
 ci <- quantile(b$result, probs = c(0.025, 0.975))
-ci
+print(paste("Upper and lower 95% confidence interval using quantile method:", ci[1], ci[2]))
 #CI by theory based method
 percent_ci <- 95
 alpha <- 1 - percent_ci/100
@@ -218,7 +217,7 @@ bootSE <- sd(b$result)
 lowerCI <- bootMean + qnorm(alpha/2)*bootSE
 upperCI <- bootMean + qnorm(1 - alpha/2)*bootSE
 ciTheory <- c(lowerCI, upperCI)
-ciTheory
+print(paste("Upper and lower 95% confidence interval using theory based method:", ciTheory[1], ciTheory[2]))
 #Compare to original data
 confint(ECVlm)
 ```
